@@ -49,11 +49,11 @@ WARNING: these command run the segmentation using 20 proccesses. To reduce this 
 ### Without DAPI
 
 ```bash
-baysor -i 500 --num-cells-init=30000 -n 20 -c ../../configs/osm_fish.toml -p -o ./output_no_dapi ./data/mRNA_coords_raw_counting.csv
+baysor run -i 500 --num-cells-init=30000 --n-clusters 20 -c ../../configs/osm_fish.toml -p -o ./output_no_dapi ./data/mRNA_coords_raw_counting.csv
 ```
 
 ### With DAPI
 
 ```bash
-baysor  -i 500 --num-cells-init=30000 -n 20 -p -c ../../configs/osm_fish.toml -o ./output_dapi -p ./data/mRNA_coords_raw_counting.csv ./data/centers_from_segmentation.csv
+baysor run -i 500 --num-cells-init=30000 --n-clusters 20 -p -c ../../configs/osm_fish.toml -o ./output_dapi -p ./data/mRNA_coords_raw_counting.csv ./data/centers_from_segmentation.csv
 ```
