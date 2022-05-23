@@ -144,11 +144,12 @@ function plot_num_of_cells_per_iterarion(tracer::Dict{Symbol, Any})
         error("No data about #components per iteration was stored")
     end
 
-    n_components_per_iter = hcat(collect.(values.(tracer[:n_components]))...);
+    n_components_per_iter = reduce(hcat, collect.(values.(tracer[:n_components])));
     labels = collect(keys(tracer[:n_components][1]));
 
-    n_components_per_iter = n_components_per_iter[sortperm(labels),:]
-    labels = sort(labels)
+    sp_labels = sortperm(labels)
+    labels = labels[sp_labels]
+    n_components_per_iter = n_components_per_iter[sp_labels,:]
 
     fig = MK.Figure(resolution=(600, 400));
     axis_args = (xticksvisible=false, yticksvisible=false, xticklabelsize=14, yticklabelsize=14, xlabel="Iteration", ylabel="Num. cells",
@@ -156,9 +157,9 @@ function plot_num_of_cells_per_iterarion(tracer::Dict{Symbol, Any})
     fig[1, 1] = MK.Axis(fig; title="Convergence", axis_args...);
 
     for i in 1:size(n_components_per_iter, 1)
-        MK.lines!(n_components_per_iter[i,:], label="$(labels[i])", color=ColorSchemes.Dark2_8[mod(i - 1, 8) + 1])
+        MK.lines!(n_components_per_iter[i,:], label="$(labels[i])", color=ColorSchemes.Dark2_8[mod1(i, 8)])
     end
-    MK.axislegend("Min #molecules"; position=(0.01, 1), nbanks = 2, titlesize=16, labelsize=14)
+    MK.axislegend("Min #molecules"; nbanks = 2, titlesize=16, labelsize=14)
     MK.xlims!(MK.current_axis(), 0, size(n_components_per_iter, 2))
     MK.ylims!(MK.current_axis(), 0, maximum(n_components_per_iter))
 

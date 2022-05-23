@@ -97,9 +97,9 @@ function adjust_densities_by_prior_segmentation!(denses::Vector{Float64}, segmen
         n_cell_mols_per_seg = min(get(data.components[c_adj].n_molecules_per_segment, segment_id, 0) + 1, seg_size)
 
         if (segment_id == main_seg) || (main_seg == 0) # Part against over-segmentation
-            denses[j] *= (1. - data.prior_seg_confidence)^0.5 * (n_cell_mols_per_seg / largest_cell_size)^data.prior_seg_confidence
+            denses[j] *= sqrt(1. - data.prior_seg_confidence) * (n_cell_mols_per_seg / largest_cell_size)^data.prior_seg_confidence
         else # Part against under-segmentation and overlap
-            denses[j] *= (1. - data.prior_seg_confidence)^0.5 * (1. - n_cell_mols_per_seg / seg_size)^seg_prior_pow
+            denses[j] *= sqrt(1. - data.prior_seg_confidence) * (1. - n_cell_mols_per_seg / seg_size)^seg_prior_pow
         end
     end
 end
@@ -235,9 +235,16 @@ append_empty_component!(data::BmmData) =
     push!(data.components, sample_distribution!(data))[end]
 
 function append_empty_components!(data::BmmData, new_component_frac::Float64)
-    for i in 1:round(Int, new_component_frac * length(data.components))
-        append_empty_component!(data)
+    old_components = length(data.components)
+    new_components = round(Int, new_component_frac * old_components)
+    resize!(data.components, old_components + new_components)
+    for i in 0:new_components-1
+        data.components[begin + i + old_components] = sample_distribution!(data, i + old_components)
+        # append_empty_component!(data)
     end
+  for i = eachindex(data.components)
+    @assert isassigned(data.components,i) "i = $i not assigned"
+  end
 end
 
 function get_global_adjacent_classes(data::BmmData)::Dict{Int, Vector{Int}}
@@ -327,11 +334,19 @@ log_em_state(data::BmmData, iter_num::Int, time_start::DateTime) =
 
 function bmm!(data::BmmData; min_molecules_per_cell::Int, n_iters::Int=500,
               new_component_frac::Float64=0.3, new_component_weight::Float64=0.2,
-              assignment_history_depth::Int=0, trace_components::Bool=false, verbose::Union{Progress, Bool}=true,
+              assignment_history_depth::Int=0, trace_components::Bool=false, verbose::Union{Progress, Bool, Nothing}=Progress(n_iters),
               component_split_step::Int=3, refine::Bool=true)
     time_start = now()
 
-    progress = isa(verbose, Progress) ? verbose : (verbose ? Progress(n_iters) : nothing)
+  progress = if verbose isa Progress
+    verbose
+  elseif verbose === nothing
+    nothing
+  elseif verbose
+    Progress(n_iters)
+  else
+    nothing
+  end
 
     if (assignment_history_depth > 0) && !(:assignment_history in keys(data.tracer))
         data.tracer[:assignment_history] = Vector{Int}[]
